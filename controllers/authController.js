@@ -4,6 +4,8 @@ const { generateTokens } = require("../utils/generateTokens");
 const asyncHandler = require("../utils/asyncHandler");
 const bcrypt = require("bcryptjs");
 // const { token } = require('morgan');
+const nodemailer = require("nodemailer");
+
 require("dotenv").config({ path: "./config.env" });
 
 const jwt = require("jsonwebtoken");
@@ -17,6 +19,23 @@ exports.register = asyncHandler(async (req, res) => {
     }
 
     const user = await User.create({ email, password });
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+      tls: {
+        rejectUnauthorized: false, // <-- allows self-signed certs
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "welcome to our website",
+      text: "you are registered successfully",
+    });
 
     return res.status(201).json({ id: user._id });
   } catch (err) {
@@ -28,6 +47,25 @@ exports.register = asyncHandler(async (req, res) => {
     return res.status(500).json({ error: "registration failed" });
   }
 });
+
+
+// const transporter = nodemailer.createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.EMAIL_USER,
+//     pass: process.env.EMAIL_PASSWORD,
+//   },
+//   tls: {
+//     rejectUnauthorized: false, // <-- allows self-signed certs
+//   },
+// });
+
+// await transporter.sendMail({
+//   from: process.env.EMAIL_USER,
+//   to: user.email,
+//   subject: "welcome to our website",
+//   text: "you are registered successfully",
+// });
 
 exports.login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
@@ -52,6 +90,9 @@ exports.login = asyncHandler(async (req, res) => {
   res.cookie("refreshToken", refreshToken, { httpOnly: true });
 
   res.json({ accessToken });
+
+  
+ 
 });
 
 exports.refresh = asyncHandler(async (req, res) => {
